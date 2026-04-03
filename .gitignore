@@ -1,0 +1,10 @@
+# Données personnelles – jamais envoyées sur GitHub
+data/activities_strava.csv
+data/*.fit
+data/*.gpx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
