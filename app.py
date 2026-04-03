@@ -13,6 +13,7 @@ import src.pages.runs        as page_runs
 import src.pages.performance as page_performance
 import src.pages.objectifs   as page_objectifs
 import src.pages.analyse     as page_analyse
+import src.pages.coach       as page_coach
 
 # ── Configuration page ────────────────────────
 st.set_page_config(
@@ -41,6 +42,7 @@ with st.sidebar:
             "🏆  Performance",
             "🎯  Objectifs",
             "📉  Analyse",
+            "🤖  Coach IA",
         ],
         label_visibility="collapsed",
     )
@@ -87,3 +89,4 @@ elif "Runs"        in page: page_runs.render(df)
 elif "Performance" in page: page_performance.render(df)
 elif "Objectifs"   in page: page_objectifs.render(df)
 elif "Analyse"     in page: page_analyse.render(df)
+elif "Coach"       in page: page_coach.render(df)
