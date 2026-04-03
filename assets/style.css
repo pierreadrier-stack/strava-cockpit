@@ -1,0 +1,225 @@
+/* ─────────────────────────────────────────────
+   style.css  –  Running Cockpit
+   ─────────────────────────────────────────── */
+
+/* ── Variables ──────────────────────────────── */
+:root {
+    --primary:   #FC4C02;
+    --secondary: #2E86AB;
+    --success:   #44BBA4;
+    --warning:   #F7B731;
+    --bg-card:   #1A1F2E;
+    --bg-card2:  #212638;
+    --text-muted: #8892A4;
+    --radius:    12px;
+}
+
+/* ── Sidebar ─────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: #111827 !important;
+    border-right: 1px solid #2D3748;
+}
+
+section[data-testid="stSidebar"] .stRadio label {
+    font-size: 0.95rem;
+    padding: 6px 0;
+    color: #CBD5E0;
+}
+
+section[data-testid="stSidebar"] .stRadio label:hover {
+    color: var(--primary) !important;
+}
+
+/* ── Metric cards ───────────────────────────── */
+.metric-card {
+    background: var(--bg-card);
+    border: 1px solid #2D3748;
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    text-align: center;
+    transition: border-color 0.2s;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.metric-card:hover {
+    border-color: var(--primary);
+}
+
+.metric-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+}
+
+.metric-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #F7FAFC;
+    letter-spacing: -0.5px;
+}
+
+.metric-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 500;
+}
+
+/* ── PR Cards ────────────────────────────────── */
+.pr-card {
+    background: var(--bg-card);
+    border: 1px solid #2D3748;
+    border-radius: var(--radius);
+    padding: 16px 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 150px;
+    transition: border-color 0.2s, transform 0.15s;
+}
+
+.pr-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.pr-empty {
+    opacity: 0.5;
+}
+
+.pr-icon {
+    font-size: 1.5rem;
+}
+
+.pr-distance {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+}
+
+.pr-time {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    margin: 4px 0;
+}
+
+.pr-pace {
+    font-size: 0.8rem;
+    color: #A0AEC0;
+}
+
+.pr-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ── PR mini card (objectifs) ───────────────── */
+.pr-mini-card {
+    background: var(--bg-card);
+    border: 1px solid #2D3748;
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #A0AEC0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    height: 100%;
+}
+
+.pr-mini-time {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.pr-mini-pace {
+    font-size: 0.85rem;
+    color: #CBD5E0;
+}
+
+/* ── Goal progress bar ──────────────────────── */
+.goal-block {
+    margin: 8px 0 4px 0;
+}
+
+.goal-bar-bg {
+    background: #2D3748;
+    border-radius: 30px;
+    height: 28px;
+    overflow: hidden;
+    position: relative;
+}
+
+.goal-bar {
+    height: 100%;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 12px;
+    transition: width 0.5s ease;
+    min-width: 40px;
+}
+
+.goal-pct {
+    color: white;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* ── Dividers & headings ─────────────────────── */
+h2, h3, h4 {
+    color: #F7FAFC !important;
+}
+
+hr {
+    border-color: #2D3748 !important;
+    margin: 16px 0 !important;
+}
+
+/* ── Dataframe ───────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: var(--radius) !important;
+}
+
+/* ── Tabs ────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background: transparent;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px 8px 0 0;
+    background: var(--bg-card);
+    border: 1px solid #2D3748;
+    border-bottom: none;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--bg-card2) !important;
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
+/* ── Scrollbar ───────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1A202C; }
+::-webkit-scrollbar-thumb { background: #4A5568; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
