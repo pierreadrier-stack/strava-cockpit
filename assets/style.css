@@ -62,7 +62,7 @@
 .block-container {
     position: relative;
     z-index: 1;
-    padding-top: 1.2rem !important;
+    padding-top: calc(1.2rem + env(safe-area-inset-top)) !important;
     padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 46px) !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
@@ -73,9 +73,26 @@
 section[data-testid="stSidebar"],
 [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 
-[data-testid="stToolbar"] { right: 0.5rem; }
-#MainMenu, footer { visibility: hidden; }
-[data-testid="stHeader"] { background: transparent !important; }
+/* Chrome Streamlit : tout masquer → look app plein écran (pas de bandeau,
+   pas de menu hamburger, pas de bouton Deploy, pas de barre arc-en-ciel). */
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+#MainMenu,
+header[data-testid="stHeader"],
+footer { display: none !important; }
+
+/* Anti-flash : Streamlit grise (opacity ~0.4) les éléments "périmés" pendant
+   un rerun → c'est CE clignotement qui trahit le web. On l'annule : la bascule
+   de page devient invisible, fluide comme une app native. */
+[data-stale="true"],
+.element-container[data-stale="true"],
+.stApp [data-stale="true"] { opacity: 1 !important; transition: none !important; }
+
+/* Pas de spinner "Running…" plein écran qui fait clignoter le fond */
+[data-testid="stStatusWidget"],
+.stApp > .stSpinner { display: none !important; }
 
 /* ── Typo ───────────────────────────────────── */
 h1, h2, h3, h4 { color: var(--text) !important; letter-spacing: -0.02em; font-weight: 700; }

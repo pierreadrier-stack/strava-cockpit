@@ -69,6 +69,13 @@ components.html(
     """
     <script>
     const head = window.parent.document.head;
+    // viewport-fit=cover : indispensable pour que le plein écran iOS s'étende
+    // sous l'encoche/la barre d'accueil ET que env(safe-area-inset-*) renvoie
+    // de vraies valeurs (sinon = 0 → marges de sécurité CSS inactives).
+    const vp = head.querySelector('meta[name="viewport"]');
+    if (vp && !/viewport-fit/.test(vp.content)) {
+        vp.content = vp.content + ', viewport-fit=cover';
+    }
     const metas = {
         'theme-color': '#0E1117',
         'apple-mobile-web-app-capable': 'yes',
