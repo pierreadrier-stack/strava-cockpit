@@ -10,6 +10,7 @@ from pathlib import Path
 
 from src.config import APP_TITLE, APP_ICON
 from src.data.loader import load_data, STRAVA_PATH
+from src.data.strava_api import is_configured as strava_is_configured
 from src.data.processor import process_data
 import src.pages.dashboard   as page_dashboard
 import src.pages.runs        as page_runs
@@ -118,8 +119,10 @@ with st.expander("📁  Importer mes données Strava", expanded=False):
     uploaded = st.file_uploader("Fichier CSV", type=["csv"], label_visibility="collapsed")
     if uploaded:
         st.success(f"✅ Fichier chargé : {uploaded.name}")
+    elif strava_is_configured():
+        st.success("🔗 Connecté à Strava — données en direct (maj ~15 min)")
     elif STRAVA_PATH.exists():
-        st.success("✅ Données Strava chargées")
+        st.success("✅ Données Strava chargées (CSV)")
     else:
         st.info("📂 Données de démo actives")
 

@@ -16,29 +16,49 @@ import numpy as np
 from pathlib import Path
 import streamlit as st
 
+from src.data.strava_api import load_strava_df
+
 # ── Chemins vers les données ─────────────────
 SAMPLE_PATH  = Path(__file__).parent.parent.parent / "data" / "sample_activities.csv"
 STRAVA_PATH  = Path(__file__).parent.parent.parent / "data" / "activities_strava.csv"
 
 
-@st.cache_data(show_spinner=False)
 def load_data(uploaded_file=None) -> pd.DataFrame:
     """
-    Charge les données depuis :
-    - un fichier uploadé via st.file_uploader  (priorité 1)
-    - data/activities_strava.csv si présent     (priorité 2)
-    - data/sample_activities.csv               (priorité 3 – démo)
+    Charge les données par ordre de priorité :
+    - fichier uploadé via st.file_uploader        (priorité 1)
+    - API Strava EN DIRECT si configurée          (priorité 2)
+    - data/activities_strava.csv si présent        (priorité 3)
+    - data/sample_activities.csv                   (priorité 4 – démo)
     Retourne un DataFrame normalisé filtré sur les runs.
     """
+    # 1. Upload manuel (prioritaire : permet de forcer un jeu de données)
     if uploaded_file is not None:
-        raw = pd.read_csv(uploaded_file)
-    elif STRAVA_PATH.exists():
+        return _finalize(pd.read_csv(uploaded_file))
+
+    # 2. API Strava en direct (None si non configurée ou erreur réseau)
+    strava = load_strava_df()
+    if strava is not None and not strava.empty:
+        return _finalize(strava)
+
+    # 3 & 4. Repli sur le CSV local (Strava puis démo)
+    return _load_csv_disk()
+
+
+@st.cache_data(show_spinner=False)
+def _load_csv_disk() -> pd.DataFrame:
+    """Charge le CSV local normalisé (Strava prioritaire, sinon démo)."""
+    if STRAVA_PATH.exists():
         raw = pd.read_csv(STRAVA_PATH)
     elif SAMPLE_PATH.exists():
         raw = pd.read_csv(SAMPLE_PATH)
     else:
         return pd.DataFrame()
+    return _finalize(raw)
 
+
+def _finalize(raw: pd.DataFrame) -> pd.DataFrame:
+    """Normalisation → filtre runs → nettoyage (pipeline commun)."""
     df = _normalize(raw)
     df = _filter_runs(df)
     df = _clean(df)
