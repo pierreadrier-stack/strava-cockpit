@@ -94,6 +94,19 @@ footer { display: none !important; }
 [data-testid="stStatusWidget"],
 .stApp > .stSpinner { display: none !important; }
 
+/* Badge "Hosted with Streamlit" + bouton "Manage app" : injectés UNIQUEMENT
+   par Streamlit Community Cloud (invisibles en local). Classes hashées → on
+   cible par motif/attribut pour résister aux changements de hash. */
+[class*="viewerBadge"],
+[class*="_viewerBadge"],
+[class*="profileContainer"],
+[data-testid="stAppViewerBadge"],
+[data-testid="manage-app-button"],
+[data-testid="stAppDeployButton"],
+.stAppDeployButton,
+a[href^="https://streamlit.io"],
+a[href*="share.streamlit.io"] { display: none !important; }
+
 /* ── Typo ───────────────────────────────────── */
 h1, h2, h3, h4 { color: var(--text) !important; letter-spacing: -0.02em; font-weight: 700; }
 h2 { font-weight: 800; }
