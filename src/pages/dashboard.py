@@ -1,13 +1,13 @@
 # ─────────────────────────────────────────────
 #  pages/dashboard.py  –  Vue principale
 # ─────────────────────────────────────────────
+from __future__ import annotations
 
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 from src.data.processor import get_stats, get_weekly_volume, process_data
-from src.config import COLORS, PLOTLY_TEMPLATE
+from src.config import COLORS
+from src.ui import css_bar_chart, css_scatter
 
 
 def render(df: pd.DataFrame):
@@ -18,28 +18,18 @@ def render(df: pd.DataFrame):
     stats = get_stats(df)
     weekly = get_weekly_volume(df)
 
-    # ── Ligne 1 : métriques clés ────────────
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        _metric("Runs totaux", f"{stats['total_runs']}", "🏃")
-    with c2:
-        _metric("Km totaux", f"{stats['total_km']:.1f} km", "📏")
-    with c3:
-        _metric("7 derniers jours", f"{stats['km_7d']:.1f} km", "📅")
-    with c4:
-        _metric("30 derniers jours", f"{stats['km_30d']:.1f} km", "🗓️")
-
-    st.markdown("")
-
-    c5, c6, c7, c8 = st.columns(4)
-    with c5:
-        _metric("Allure moyenne", stats["avg_pace_label"], "⚡")
-    with c6:
-        _metric("Distance moyenne", f"{stats['avg_dist']:.2f} km", "📐")
-    with c7:
-        _metric("Temps total", stats["total_time_label"], "⏱️")
-    with c8:
-        _metric("Dénivelé total", f"{stats['total_elev']:,} m", "⛰️")
+    # ── Métriques clés (grille responsive 2×2 / 4) ──
+    metrics = [
+        ("Runs totaux",      f"{stats['total_runs']}",          "🏃"),
+        ("Km totaux",        f"{stats['total_km']:.1f} km",     "📏"),
+        ("7 derniers jours", f"{stats['km_7d']:.1f} km",        "📅"),
+        ("30 derniers jours",f"{stats['km_30d']:.1f} km",       "🗓️"),
+        ("Allure moyenne",   stats["avg_pace_label"],           "⚡"),
+        ("Distance moyenne", f"{stats['avg_dist']:.2f} km",     "📐"),
+        ("Temps total",      stats["total_time_label"],         "⏱️"),
+        ("Dénivelé total",   f"{stats['total_elev']:,} m",      "⛰️"),
+    ]
+    _metric_grid(metrics)
 
     st.markdown("---")
 
@@ -49,8 +39,14 @@ def render(df: pd.DataFrame):
     with col_left:
         st.markdown("#### Volume hebdomadaire (km)")
         if not weekly.empty:
-            fig = _bar_weekly(weekly)
-            st.plotly_chart(fig, use_container_width=True)
+            from src.config import GOALS
+            recent = weekly.tail(12)
+            css_bar_chart(
+                labels=[d.strftime("%d %b") for d in recent["week"]],
+                values=recent["km"].tolist(),
+                goal=GOALS["weekly_km_target"],
+                caption="Kilomètres courus par semaine",
+            )
         else:
             st.info("Pas assez de données pour afficher le graphique.")
 
@@ -65,90 +61,42 @@ def render(df: pd.DataFrame):
     # ── Graphique : activité sur la période ──
     st.markdown("---")
     st.markdown("#### Activité sur la période")
-    fig2 = _scatter_activity(df)
-    st.plotly_chart(fig2, use_container_width=True)
+    _activity_scatter(df)
 
 
 # ── Helpers UI ────────────────────────────────
 
-def _metric(label: str, value: str, icon: str = ""):
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-icon">{icon}</div>
-        <div class="metric-value">{value}</div>
-        <div class="metric-label">{label}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def _bar_weekly(weekly: pd.DataFrame):
-    # Cible hebdomadaire
-    from src.config import GOALS
-    target = GOALS["weekly_km_target"]
-
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=weekly["week"].dt.strftime("%d %b"),
-        y=weekly["km"],
-        marker_color=COLORS["primary"],
-        name="Volume (km)",
-        hovertemplate="<b>%{x}</b><br>%{y:.1f} km<extra></extra>",
-    ))
-    fig.add_hline(
-        y=target,
-        line_dash="dot",
-        line_color=COLORS["warning"],
-        annotation_text=f"Objectif {target} km",
-        annotation_position="top right",
+def _metric_grid(items: list[tuple[str, str, str]]):
+    """items = [(label, value, icon), …] → grille responsive 2×2 (mobile) / 4 (desktop)."""
+    cards = "".join(
+        f'<div class="metric-card">'
+        f'<div class="metric-icon">{icon}</div>'
+        f'<div class="metric-value">{value}</div>'
+        f'<div class="metric-label">{label}</div>'
+        f'</div>'
+        for label, value, icon in items
     )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=300,
-        margin=dict(l=0, r=0, t=20, b=0),
-        showlegend=False,
-        yaxis_title="km",
-        xaxis_title="",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-    )
-    return fig
+    st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
 
 
-def _scatter_activity(df: pd.DataFrame):
-    dfc = df.copy()
-    dfc["date_str"] = dfc["date"].dt.strftime("%d/%m/%Y")
-
-    fig = px.scatter(
-        dfc,
-        x="date",
-        y="distance_km",
-        color="run_type",
-        size="distance_km",
-        size_max=18,
-        color_discrete_map={
+def _activity_scatter(df: pd.DataFrame):
+    d = df.dropna(subset=["date", "distance_km"])
+    if d.empty:
+        st.info("Pas de données pour la période.")
+        return
+    dmin, dmax = d["date"].min(), d["date"].max()
+    span = (dmax - dmin).total_seconds() or 1.0
+    xs = [(x - dmin).total_seconds() / span for x in d["date"]]
+    css_scatter(
+        xs=xs,
+        values=d["distance_km"].tolist(),
+        types=d["run_type"].tolist(),
+        color_map={
             "Facile":  COLORS["easy_run"],
             "Soutenu": COLORS["hard_run"],
         },
-        hover_data={
-            "date": False,
-            "date_str": True,
-            "distance_km": ":.2f",
-            "pace_label": True,
-            "run_type": True,
-        },
-        labels={
-            "distance_km": "Distance (km)",
-            "date_str": "Date",
-            "pace_label": "Allure",
-            "run_type": "Type",
-        },
+        unit="km",
+        x_start=dmin.strftime("%d/%m/%y"),
+        x_end=dmax.strftime("%d/%m/%y"),
+        caption="Chaque point = une sortie · hauteur = distance · taille ∝ distance",
     )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=280,
-        margin=dict(l=0, r=0, t=10, b=0),
-        legend_title="Type de run",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-    )
-    return fig

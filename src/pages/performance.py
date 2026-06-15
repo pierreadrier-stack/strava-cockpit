@@ -3,12 +3,10 @@
 # ─────────────────────────────────────────────
 
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 import numpy as np
 from src.data.processor import get_prs, get_pace_trend
-from src.config import COLORS, PLOTLY_TEMPLATE
+from src.ui import css_bar_chart, css_line_chart
 
 
 def render(df: pd.DataFrame):
@@ -19,9 +17,8 @@ def render(df: pd.DataFrame):
     prs   = get_prs(df)
     trend = get_pace_trend(df, n_weeks=16)
 
-    # ── Records personnels ────────────────────
+    # ── Records personnels (grille responsive) ──
     st.markdown("#### 🥇 Records personnels")
-    cols = st.columns(5)
     pr_labels = {
         "1km":      ("1 km",       "🔵"),
         "5km":      ("5 km",       "🟠"),
@@ -29,28 +26,29 @@ def render(df: pd.DataFrame):
         "semi":     ("Semi-mara.", "🟣"),
         "marathon": ("Marathon",   "⭐"),
     }
-    for i, (key, (label, icon)) in enumerate(pr_labels.items()):
+    cards = ""
+    for key, (label, icon) in pr_labels.items():
         pr = prs.get(key)
-        with cols[i]:
-            if pr:
-                st.markdown(f"""
-                <div class="pr-card">
-                    <div class="pr-icon">{icon}</div>
-                    <div class="pr-distance">{label}</div>
-                    <div class="pr-time">{pr['label']}</div>
-                    <div class="pr-pace">{pr['pace']}</div>
-                    <div class="pr-date">{pr['date']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="pr-card pr-empty">
-                    <div class="pr-icon">{icon}</div>
-                    <div class="pr-distance">{label}</div>
-                    <div class="pr-time">—</div>
-                    <div class="pr-date">Pas encore</div>
-                </div>
-                """, unsafe_allow_html=True)
+        if pr:
+            cards += (
+                f'<div class="pr-card">'
+                f'<div class="pr-icon">{icon}</div>'
+                f'<div class="pr-distance">{label}</div>'
+                f'<div class="pr-time">{pr["label"]}</div>'
+                f'<div class="pr-pace">{pr["pace"]}</div>'
+                f'<div class="pr-date">{pr["date"]}</div>'
+                f'</div>'
+            )
+        else:
+            cards += (
+                f'<div class="pr-card pr-empty">'
+                f'<div class="pr-icon">{icon}</div>'
+                f'<div class="pr-distance">{label}</div>'
+                f'<div class="pr-time">—</div>'
+                f'<div class="pr-date">Pas encore</div>'
+                f'</div>'
+            )
+    st.markdown(f'<div class="pr-grid">{cards}</div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
@@ -60,15 +58,13 @@ def render(df: pd.DataFrame):
     with col_trend:
         st.markdown("#### 📈 Évolution de l'allure (16 semaines)")
         if not trend.empty:
-            fig = _pace_trend_chart(trend)
-            st.plotly_chart(fig, use_container_width=True)
+            _pace_trend_chart(trend)
         else:
             st.info("Pas assez de données.")
 
     with col_dist:
         st.markdown("#### 📊 Distribution des distances")
-        fig2 = _dist_histogram(df)
-        st.plotly_chart(fig2, use_container_width=True)
+        _dist_histogram(df)
 
     st.markdown("---")
 
@@ -91,62 +87,43 @@ def render(df: pd.DataFrame):
 # ── Graphiques ─────────────────────────────
 
 def _pace_trend_chart(trend: pd.DataFrame):
-    fig = go.Figure()
+    weeks = trend["week"]
+    vals = trend["avg_pace_min"].tolist()
+    labels = [w.strftime("%d %b") for w in weeks]
 
-    # Ligne d'allure
-    fig.add_trace(go.Scatter(
-        x=trend["week"],
-        y=trend["avg_pace_min"],
-        mode="lines+markers",
-        name="Allure moy.",
-        line=dict(color=COLORS["primary"], width=2.5),
-        marker=dict(size=6),
-        hovertemplate="<b>%{x|%d %b}</b><br>Allure : %{y:.2f} min/km<extra></extra>",
-    ))
-
-    # Tendance linéaire (régression simple)
+    trend_line = None
     if len(trend) >= 3:
-        x_num = (trend["week"] - trend["week"].min()).dt.days
-        z = np.polyfit(x_num, trend["avg_pace_min"], 1)
-        p = np.poly1d(z)
-        fig.add_trace(go.Scatter(
-            x=trend["week"],
-            y=p(x_num),
-            mode="lines",
-            name="Tendance",
-            line=dict(color=COLORS["warning"], width=1.5, dash="dot"),
-        ))
+        x_num = (weeks - weeks.min()).dt.days.to_numpy()
+        p = np.poly1d(np.polyfit(x_num, vals, 1))
+        trend_line = [float(p(x)) for x in x_num]
 
-    fig.update_yaxes(autorange="reversed")   # allure : plus bas = mieux
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=320,
-        margin=dict(l=0, r=0, t=10, b=0),
-        yaxis_title="min/km",
-        xaxis_title="",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+    css_line_chart(
+        labels=labels,
+        values=vals,
+        trend=trend_line,
+        accent="orange",
+        unit="min/km",
+        hint="↓ plus rapide",
+        value_fmt=_fmt_pace_min,
     )
-    return fig
+
+
+def _fmt_pace_min(v: float) -> str:
+    total = round(v * 60)
+    return f"{total // 60}:{total % 60:02d}"
 
 
 def _dist_histogram(df: pd.DataFrame):
-    fig = px.histogram(
-        df,
-        x="distance_km",
-        nbins=20,
-        color_discrete_sequence=[COLORS["secondary"]],
-        labels={"distance_km": "Distance (km)", "count": "Nombre de runs"},
+    dist = df["distance_km"].dropna()
+    if dist.empty:
+        st.info("Pas de données.")
+        return
+    counts, edges = np.histogram(dist, bins=8)
+    labels = [f"{edges[i]:.0f}–{edges[i + 1]:.0f}" for i in range(len(counts))]
+    css_bar_chart(
+        labels=labels,
+        values=counts.tolist(),
+        accent="blue",
+        decimals=0,
+        caption="Nombre de sorties par tranche de distance (km)",
     )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=320,
-        margin=dict(l=0, r=0, t=10, b=0),
-        yaxis_title="Runs",
-        bargap=0.05,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        showlegend=False,
-    )
-    return fig

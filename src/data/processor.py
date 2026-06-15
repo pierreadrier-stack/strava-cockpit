@@ -8,11 +8,13 @@ Les pages importent les fonctions dont elles ont besoin.
 
 import pandas as pd
 import numpy as np
+import streamlit as st
 from src.config import GOALS, PR_DISTANCES, SEUIL_ALLURE_SOUTENU
 
 
 # ── 1. Enrichissement du DataFrame ───────────
 
+@st.cache_data(show_spinner=False)
 def process_data(df: pd.DataFrame) -> pd.DataFrame:
     """Ajoute les colonnes calculées au DataFrame brut."""
     df = df.copy()

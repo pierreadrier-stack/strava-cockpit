@@ -1,10 +1,18 @@
-# Données personnelles – jamais envoyées sur GitHub
-data/activities_strava.csv
+# Données : le CSV principal est inclus (repo PRIVÉ) pour l'app en ligne.
+# ⚠️ Si tu repasses le repo en PUBLIC, ré-ignore data/activities_strava.csv !
 data/*.fit
 data/*.gpx
+
+# Secrets : JAMAIS sur GitHub (clé API, mot de passe…)
+.streamlit/secrets.toml
+
+# Config locale d'outils
+.claude/
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 .env
+.venv/
+venv/

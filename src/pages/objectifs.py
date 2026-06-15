@@ -3,10 +3,10 @@
 # ─────────────────────────────────────────────
 
 import streamlit as st
-import plotly.graph_objects as go
 import pandas as pd
 from src.data.processor import get_prs, get_goal_progress, get_weekly_volume
-from src.config import COLORS, GOALS, PLOTLY_TEMPLATE
+from src.config import COLORS, GOALS
+from src.ui import css_bar_chart
 
 
 def render(df: pd.DataFrame):
@@ -150,32 +150,14 @@ def _volume_block(weekly, progress):
     with col1:
         if not weekly.empty:
             recent = weekly.tail(8)
-            fig = go.Figure()
-            colors = [
-                COLORS["primary"] if k >= GOALS["weekly_km_target"] else COLORS["secondary"]
-                for k in recent["km"]
-            ]
-            fig.add_trace(go.Bar(
-                x=recent["week"].dt.strftime("%d %b"),
-                y=recent["km"],
-                marker_color=colors,
-                hovertemplate="<b>%{x}</b><br>%{y:.1f} km<extra></extra>",
-            ))
-            fig.add_hline(
-                y=GOALS["weekly_km_target"],
-                line_dash="dot",
-                line_color=COLORS["warning"],
-                annotation_text=f"Cible {GOALS['weekly_km_target']} km",
+            css_bar_chart(
+                labels=[d.strftime("%d %b") for d in recent["week"]],
+                values=recent["km"].tolist(),
+                goal=GOALS["weekly_km_target"],
+                caption="Kilomètres par semaine (8 dernières)",
             )
-            fig.update_layout(
-                template=PLOTLY_TEMPLATE,
-                height=250,
-                margin=dict(l=0, r=0, t=10, b=0),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                showlegend=False,
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Pas assez de données pour afficher le volume.")
 
     with col2:
         pct = int(progress["volume"] * 100)

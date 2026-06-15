@@ -1,7 +1,9 @@
 # ─────────────────────────────────────────────
 #  pages/coach.py  –  Coach IA propulsé par Claude
 # ─────────────────────────────────────────────
+from __future__ import annotations
 
+import os
 import streamlit as st
 import anthropic
 import pandas as pd
@@ -11,6 +13,7 @@ import re
 from datetime import datetime, timedelta
 from src.data.processor import get_stats, get_prs, get_weekly_volume, get_goal_progress
 from src.config import GOALS, COLORS, PLOTLY_TEMPLATE
+from src.ui import apply_glass
 
 
 def render(df: pd.DataFrame):
@@ -18,9 +21,14 @@ def render(df: pd.DataFrame):
     st.markdown("Ton coach running personnel, propulsé par Claude.")
     st.markdown("---")
 
-    api_key = st.secrets.get("ANTHROPIC_API_KEY", None)
+    api_key = _get_api_key()
     if not api_key:
-        st.error("⚠️ Clé API Anthropic manquante dans les Secrets Streamlit.")
+        st.error(
+            "⚠️ Clé API Anthropic manquante.\n\n"
+            "En local : définis la variable d'environnement `ANTHROPIC_API_KEY`, "
+            "ou crée `.streamlit/secrets.toml` avec `ANTHROPIC_API_KEY = \"...\"`.\n\n"
+            "Sur Streamlit Cloud : ajoute-la dans les Secrets de l'app."
+        )
         return
 
     stats    = get_stats(df)
@@ -48,6 +56,18 @@ def render(df: pd.DataFrame):
 
     with tab_chat:
         _tab_chat(api_key, context)
+
+
+def _get_api_key() -> str | None:
+    """Récupère la clé API sans crasher si aucun secrets.toml n'existe.
+    Priorité : Secrets Streamlit, puis variable d'environnement."""
+    try:
+        key = st.secrets.get("ANTHROPIC_API_KEY")
+        if key:
+            return key
+    except Exception:
+        pass
+    return os.environ.get("ANTHROPIC_API_KEY")
 
 
 # ══════════════════════════════════════════════
@@ -297,11 +317,9 @@ def _chart_projection_volume(weekly, data):
         template=PLOTLY_TEMPLATE,
         height=300,
         margin=dict(l=0, r=0, t=10, b=0),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(apply_glass(fig), use_container_width=True)
 
 
 # ══════════════════════════════════════════════

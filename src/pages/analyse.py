@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from src.data.processor import get_weekly_volume, get_monthly_volume
 from src.config import COLORS, PLOTLY_TEMPLATE
+from src.ui import css_bar_chart, css_line_chart, apply_glass
 
 
 def render(df: pd.DataFrame):
@@ -40,57 +41,42 @@ def _tab_volume(weekly, monthly):
     with col1:
         st.markdown("#### Volume hebdomadaire")
         if not weekly.empty:
-            fig = _bar_chart(
-                x=weekly["week"].dt.strftime("%d %b"),
-                y=weekly["km"],
-                color=COLORS["primary"],
-                ylabel="km",
-                hover_label="km",
+            recent = weekly.tail(12)
+            css_bar_chart(
+                labels=[d.strftime("%d %b") for d in recent["week"]],
+                values=recent["km"].tolist(),
+                decimals=1,
+                caption="Kilomètres par semaine",
             )
-            st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         st.markdown("#### Volume mensuel")
         if not monthly.empty:
-            fig = _bar_chart(
-                x=monthly["month_label"],
-                y=monthly["km"],
-                color=COLORS["secondary"],
-                ylabel="km",
-                hover_label="km",
+            css_bar_chart(
+                labels=monthly["month_label"].tolist(),
+                values=monthly["km"].tolist(),
+                accent="blue",
+                decimals=1,
+                caption="Kilomètres par mois",
             )
-            st.plotly_chart(fig, use_container_width=True)
 
     # Évolution de l'allure moyenne par mois
     st.markdown("#### Allure moyenne mensuelle")
     if not monthly.empty:
-        fig = _pace_monthly_chart(monthly)
-        st.plotly_chart(fig, use_container_width=True)
+        _pace_monthly_chart(monthly)
 
 
 def _pace_monthly_chart(monthly):
-    monthly = monthly.copy()
-    monthly["avg_pace_min"] = monthly["avg_pace_s"] / 60
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=monthly["month_label"],
-        y=monthly["avg_pace_min"],
-        mode="lines+markers",
-        line=dict(color=COLORS["primary"], width=2.5),
-        marker=dict(size=8),
-        hovertemplate="<b>%{x}</b><br>%{y:.2f} min/km<extra></extra>",
-    ))
-    fig.update_yaxes(autorange="reversed")
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=280,
-        margin=dict(l=0, r=0, t=10, b=0),
-        yaxis_title="min/km (↓ = plus rapide)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
+    m = monthly.copy()
+    m["avg_pace_min"] = m["avg_pace_s"] / 60
+    css_line_chart(
+        labels=m["month_label"].tolist(),
+        values=m["avg_pace_min"].tolist(),
+        accent="orange",
+        unit="min/km",
+        hint="↓ plus rapide",
+        value_fmt=lambda v: f"{round(v * 60) // 60}:{round(v * 60) % 60:02d}",
     )
-    return fig
 
 
 # ── Onglet Fréquence ──────────────────────────
@@ -101,37 +87,30 @@ def _tab_frequence(df, weekly):
     with col1:
         st.markdown("#### Runs par semaine")
         if not weekly.empty:
-            fig = _bar_chart(
-                x=weekly["week"].dt.strftime("%d %b"),
-                y=weekly["runs"],
-                color=COLORS["warning"],
-                ylabel="Runs",
-                hover_label="runs",
+            recent = weekly.tail(12)
+            css_bar_chart(
+                labels=[d.strftime("%d %b") for d in recent["week"]],
+                values=recent["runs"].tolist(),
+                decimals=0,
+                caption="Nombre de sorties par semaine",
             )
-            st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         st.markdown("#### Jour de la semaine préféré")
         dow_counts = df["date"].dt.day_name()
         order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        fr_names = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi",
-                    "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+        fr_names = {"Monday": "Lun", "Tuesday": "Mar", "Wednesday": "Mer",
+                    "Thursday": "Jeu", "Friday": "Ven", "Saturday": "Sam", "Sunday": "Dim"}
         dow_df = dow_counts.value_counts().reindex(order, fill_value=0).reset_index()
         dow_df.columns = ["day_en", "count"]
         dow_df["day_fr"] = dow_df["day_en"].map(fr_names)
-        fig = px.bar(
-            dow_df, x="day_fr", y="count",
-            color_discrete_sequence=[COLORS["secondary"]],
-            labels={"day_fr": "", "count": "Runs"},
+        css_bar_chart(
+            labels=dow_df["day_fr"].tolist(),
+            values=dow_df["count"].tolist(),
+            accent="blue",
+            decimals=0,
+            caption="Nombre de sorties par jour de la semaine",
         )
-        fig.update_layout(
-            template=PLOTLY_TEMPLATE,
-            height=300,
-            margin=dict(l=0, r=0, t=10, b=0),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
     # Heatmap calendrier
     st.markdown("#### Calendrier des sorties")
@@ -164,10 +143,8 @@ def _calendar_heatmap(df):
         height=230,
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(tickangle=-45, tickfont_size=10),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(apply_glass(fig), use_container_width=True)
 
 
 # ── Onglet Répartition ────────────────────────
@@ -194,10 +171,8 @@ def _tab_repartition(df):
             height=320,
             margin=dict(l=0, r=0, t=10, b=0),
             showlegend=False,
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(apply_glass(fig), use_container_width=True)
 
     with col2:
         st.markdown("#### Distance vs allure")
@@ -220,15 +195,14 @@ def _tab_repartition(df):
             },
             hover_data={"pace_label": True, "duration_label": True},
         )
-        fig.update_yaxes(autorange="reversed")
         fig.update_layout(
             template=PLOTLY_TEMPLATE,
             height=320,
             margin=dict(l=0, r=0, t=10, b=0),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
         )
+        fig = apply_glass(fig)
+        fig.update_yaxes(autorange="reversed")
         st.plotly_chart(fig, use_container_width=True)
 
     # Stats par type de run
@@ -246,22 +220,3 @@ def _tab_repartition(df):
     stats_by_type = stats_by_type.drop(columns=["Allure_moy_s"])
     stats_by_type.columns = ["Type", "Runs", "Km total", "Km moyen", "Allure moy."]
     st.dataframe(stats_by_type, use_container_width=True, hide_index=True)
-
-
-# ── Helper générique ──────────────────────────
-
-def _bar_chart(x, y, color, ylabel, hover_label):
-    fig = go.Figure(go.Bar(
-        x=x, y=y,
-        marker_color=color,
-        hovertemplate=f"<b>%{{x}}</b><br>%{{y:.1f}} {hover_label}<extra></extra>",
-    ))
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=280,
-        margin=dict(l=0, r=0, t=10, b=0),
-        yaxis_title=ylabel,
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-    )
-    return fig
