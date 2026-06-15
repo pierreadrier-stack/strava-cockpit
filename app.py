@@ -250,3 +250,48 @@ components.html(
     """,
     height=0,
 )
+
+# ── Masquer le bouton "Manage app" / badge Streamlit Cloud (côté propriétaire) ──
+#  Ces éléments ne sont injectés QUE sur Streamlit Community Cloud (invisibles
+#  pour les visiteurs déconnectés). Comme le sélecteur exact varie selon les
+#  builds, on ratisse large : testids connus, liens vers streamlit.io, et tout
+#  bouton fixe à la couleur de marque (#FF4B4B). Re-vérifié via MutationObserver.
+components.html(
+    """
+    <script>
+    (function () {
+        const d = window.parent.document;
+        const kill = (el) => { if (el) { el.style.setProperty('display', 'none', 'important'); } };
+        const run = function () {
+            [
+                '[data-testid="manage-app-button"]',
+                '[data-testid="stStatusWidget"]',
+                '[data-testid="stAppDeployButton"]',
+                '[class*="viewerBadge"]',
+                '[class*="profileContainer"]',
+                '[class*="_profileContainer"]'
+            ].forEach(sel => d.querySelectorAll(sel).forEach(kill));
+
+            // Badge "Hosted with Streamlit" (lien) → masque son conteneur
+            d.querySelectorAll('a[href*="streamlit.io"]').forEach(a => kill(a.closest('div') || a));
+
+            // Heuristique : bouton fixe à la couleur de marque Streamlit
+            d.querySelectorAll('button, a, div').forEach(el => {
+                try {
+                    const cs = getComputedStyle(el);
+                    if (cs.position === 'fixed' && cs.backgroundColor.includes('255, 75, 75')) {
+                        kill(el);
+                    }
+                } catch (e) {}
+            });
+        };
+        run();
+        try {
+            new MutationObserver(run).observe(d.body, { childList: true, subtree: true });
+        } catch (e) {}
+        setInterval(run, 1500);
+    })();
+    </script>
+    """,
+    height=0,
+)
